@@ -16,6 +16,12 @@ npm install
 npm run build
 ```
 
+### Dev (watch / hot reload)
+
+```bash
+npm run dev
+```
+
 ### Test
 
 ```bash
