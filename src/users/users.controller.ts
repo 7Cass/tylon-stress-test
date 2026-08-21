@@ -32,7 +32,7 @@ export class UsersController {
   }
 
   @Get(":id")
-  getById(@Param("id") id: string) {
+  async getById(@Param("id") id: string) {
     try {
       const user = await this.users.getById(id);
       return { id: user.id, name: user.name, email: user.email };
@@ -54,7 +54,7 @@ export class UsersController {
   }
 
   @Patch(":id")
-  update(
+  async update(
     @Param("id") id: string,
     @Body() body: Partial<Pick<UpdateUserInput, "name" | "email">>,
   ) {
