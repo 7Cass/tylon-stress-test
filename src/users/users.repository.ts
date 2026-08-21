@@ -1,13 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import { randomUUID } from "crypto";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 
-import {
-  CreateUserInput,
-  UpdateUserInput,
-  User,
-  UserId,
-} from "./user.types";
+import { CreateUserInput, UpdateUserInput, User, UserId } from "./user.types";
 
 export class UserNotFoundError extends Error {
   constructor(id: UserId) {
@@ -16,35 +10,49 @@ export class UserNotFoundError extends Error {
   }
 }
 
+export class UserConflictError extends Error {
+  constructor(username: string) {
+    super(`User already exists: ${username}`);
+    this.name = "UserConflictError";
+  }
+}
+
 @Injectable()
 export class UsersRepository {
   private readonly users = new Map<UserId, User>();
-
-  // Very small “stress test” lock: in JS, operations interleave via the event loop,
-  // so we serialize CRUD for correctness under concurrent requests.
   private queue: Promise<void> = Promise.resolve();
 
   private hashPassword(password: string): string {
     return createHash("sha256").update(password).digest("hex");
   }
 
-  private runExclusive<T>(fn: () => T): Promise<T> {
-    // Serialize by chaining onto the tail promise.
-    const next = this.queue.then(() => fn());
-    // Keep the tail alive even if this operation throws.
-    this.queue = next.then(
-      () => undefined,
-      () => undefined,
+  verifyPassword(user: User, password: string): boolean {
+    return user.password === this.hashPassword(password);
+  }
+
+  async findByUsername(username: string): Promise<User | undefined> {
+    return this.runExclusive(() =>
+      Array.from(this.users.values()).find((user) => user.username === username),
     );
+  }
+
+  private runExclusive<T>(fn: () => T): Promise<T> {
+    const next = this.queue.then(() => fn());
+    this.queue = next.then(() => undefined, () => undefined);
     return next;
   }
 
   async create(input: CreateUserInput, id: UserId = randomUUID()): Promise<User> {
     return this.runExclusive(() => {
+      if (Array.from(this.users.values()).some((user) => user.username === input.username)) {
+        throw new UserConflictError(input.username);
+      }
+
       const user: User = {
         id,
         name: input.name,
         email: input.email,
+        username: input.username,
         password: this.hashPassword(input.password),
       };
       this.users.set(user.id, user);
@@ -69,10 +77,7 @@ export class UsersRepository {
       const existing = this.users.get(id);
       if (!existing) throw new UserNotFoundError(id);
 
-      const updated: User = {
-        ...existing,
-        ...input,
-      };
+      const updated: User = { ...existing, ...input };
       this.users.set(id, updated);
       return updated;
     });

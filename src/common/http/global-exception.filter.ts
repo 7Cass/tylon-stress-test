@@ -1,10 +1,4 @@
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  HttpException,
-  HttpStatus,
-} from "@nestjs/common";
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
 import type { Response } from "express";
 
 import type { ErrorResponse } from "./error.types";
@@ -16,10 +10,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
 
     const isHttp = exception instanceof HttpException;
-    const status = isHttp
-      ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
-
+    const status = isHttp ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
     const code = this.mapCode(status);
 
     let message: string;
@@ -27,18 +18,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     if (isHttp) {
       const res = exception.getResponse();
-
-      // Nest can return string | object.
       if (typeof res === "string") {
         message = res;
       } else if (res && typeof res === "object") {
         const maybeMessage = (res as Record<string, unknown>).message;
         const maybeDetails = (res as Record<string, unknown>).details;
-
-        message =
-          typeof maybeMessage === "string"
-            ? maybeMessage
-            : ("message" in (res as object) ? String(maybeMessage) : "");
+        message = typeof maybeMessage === "string" ? maybeMessage : String(maybeMessage ?? "");
         details = maybeDetails as ErrorResponse["details"] | undefined;
       } else {
         message = exception.message;
@@ -49,14 +34,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     if (!message) message = "Unexpected error";
 
-    const body: ErrorResponse = {
-      status,
-      code,
-      message,
-      ...(details === undefined ? {} : { details }),
-    };
-
-    response.status(status).json(body);
+    response.status(status).json({ status, code, message, ...(details === undefined ? {} : { details }) });
   }
 
   private mapCode(status: number): ErrorResponse["code"] {

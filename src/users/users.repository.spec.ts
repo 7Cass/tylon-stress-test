@@ -1,17 +1,18 @@
-import { UsersRepository, UserNotFoundError } from "./users.repository";
+import { UserNotFoundError, UsersRepository } from "./users.repository";
 
 describe("UsersRepository (in-memory)", () => {
   it("creates, reads, updates and deletes", async () => {
     const repo = new UsersRepository();
 
     const user = await repo.create(
-      { name: "João", email: "joao@example.com", password: "pw" },
+      { name: "João", email: "joao@example.com", username: "joao", password: "pw" },
       "u1",
     );
     expect(user).toEqual({
       id: "u1",
       name: "João",
       email: "joao@example.com",
+      username: "joao",
       password: user.password,
     });
 
@@ -22,6 +23,7 @@ describe("UsersRepository (in-memory)", () => {
       id: "u1",
       name: "João P.",
       email: "joao@example.com",
+      username: "joao",
       password: user.password,
     });
 
