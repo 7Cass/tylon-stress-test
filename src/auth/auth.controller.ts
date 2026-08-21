@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, HttpCode, Post } from "@nestjs/common";
 import { IsString, MinLength } from "class-validator";
 
 import { Public } from "../common/http/public.decorator";
@@ -20,6 +20,7 @@ export class AuthController {
 
   @Public()
   @Post("login")
+  @HttpCode(200)
   login(@Body() body: LoginDto) {
     return this.auth.login(body.username, body.password);
   }
