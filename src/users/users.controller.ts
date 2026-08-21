@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
@@ -9,39 +10,57 @@ import {
   Patch,
   Post,
 } from "@nestjs/common";
+import { IsEmail, IsString, MinLength } from "class-validator";
 
-import {
-  CreateUserInput,
-  UpdateUserInput,
-  UserPublic,
-} from "./user.types";
-import { UsersRepository, UserNotFoundError } from "./users.repository";
+import { Public } from "../common/http/public.decorator";
+import { CreateUserInput, UpdateUserInput, UserPublic } from "./user.types";
+import { UserNotFoundError, UsernameAlreadyExistsError, UsersRepository } from "./users.repository";
 
-function toPublic(u: { id: string; name: string; email: string }): UserPublic {
-  return { id: u.id, name: u.name, email: u.email };
+class CreateUserDto {
+  @IsString()
+  @MinLength(1)
+  name!: string;
+
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  @MinLength(1)
+  username!: string;
+
+  @IsString()
+  @MinLength(1)
+  password!: string;
+}
+
+function toPublic(u: { id: string; name: string; email: string; username: string }): UserPublic {
+  return { id: u.id, name: u.name, email: u.email, username: u.username };
 }
 
 @Controller("users")
 export class UsersController {
   constructor(private readonly users: UsersRepository) {}
 
+  @Public()
   @Post()
-  async create(@Body() body: CreateUserInput) {
-    const created = await this.users.create(body);
-    return { id: created.id, name: created.name, email: created.email };
+  async create(@Body() body: CreateUserDto) {
+    try {
+      return toPublic(await this.users.create(body as CreateUserInput));
+    } catch (err) {
+      if (err instanceof UsernameAlreadyExistsError) {
+        throw new ConflictException({ message: "Username already exists" });
+      }
+      throw err;
+    }
   }
 
   @Get(":id")
   async getById(@Param("id") id: string) {
     try {
-      const user = await this.users.getById(id);
-      return { id: user.id, name: user.name, email: user.email };
+      return toPublic(await this.users.getById(id));
     } catch (err) {
       if (err instanceof UserNotFoundError) {
-        throw new NotFoundException({
-          error: "UserNotFound",
-          message: "User not found",
-        });
+        throw new NotFoundException({ error: "UserNotFound", message: "User not found" });
       }
       throw err;
     }
@@ -49,24 +68,16 @@ export class UsersController {
 
   @Get()
   async list() {
-    const users = await this.users.list();
-    return users.map((u) => toPublic(u));
+    return (await this.users.list()).map((u) => toPublic(u));
   }
 
   @Patch(":id")
-  async update(
-    @Param("id") id: string,
-    @Body() body: Partial<Pick<UpdateUserInput, "name" | "email">>,
-  ) {
+  async update(@Param("id") id: string, @Body() body: Partial<Pick<UpdateUserInput, "name" | "email">>) {
     try {
-      const updated = await this.users.update(id, body as UpdateUserInput);
-      return { id: updated.id, name: updated.name, email: updated.email };
+      return toPublic(await this.users.update(id, body as UpdateUserInput));
     } catch (err) {
       if (err instanceof UserNotFoundError) {
-        throw new NotFoundException({
-          error: "UserNotFound",
-          message: "User not found",
-        });
+        throw new NotFoundException({ error: "UserNotFound", message: "User not found" });
       }
       throw err;
     }
@@ -77,13 +88,9 @@ export class UsersController {
   async delete(@Param("id") id: string) {
     try {
       await this.users.delete(id);
-      return;
     } catch (err) {
       if (err instanceof UserNotFoundError) {
-        throw new NotFoundException({
-          error: "UserNotFound",
-          message: "User not found",
-        });
+        throw new NotFoundException({ error: "UserNotFound", message: "User not found" });
       }
       throw err;
     }
