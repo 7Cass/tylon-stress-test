@@ -35,10 +35,11 @@ describe("auth e2e", () => {
 
     const login = await request(app.getHttpServer())
       .post("/auth/login")
-      .send({ username: "testuser", password: "secret" })
+      .send({ email: "test@example.com", password: "secret" })
       .expect(200);
 
-    const decoded: any = decode(login.body.accessToken);
+    expect(Object.keys(login.body)).toEqual(["access_token"]);
+    const decoded: any = decode(login.body.access_token);
     expect(decoded.sub).toBe(created.body.id);
     expect(decoded.exp - decoded.iat).toBe(1800);
 
@@ -50,26 +51,26 @@ describe("auth e2e", () => {
 
     await request(app.getHttpServer())
       .post("/auth/login")
-      .send({ username: "testuser", password: "secret" })
+      .send({ email: "test@example.com", password: "secret" })
       .expect(200)
       .expect(({ body }) => {
-        expect(body.accessToken).toBeDefined();
+        expect(body.access_token).toBeDefined();
       });
 
     await request(app.getHttpServer())
       .get("/users")
-      .set("Authorization", `Bearer ${login.body.accessToken}`)
+      .set("Authorization", `Bearer ${login.body.access_token}`)
       .expect(200);
 
     await request(app.getHttpServer())
       .post("/auth/login")
-      .send({ username: "testuser", password: "wrong" })
+      .send({ email: "test@example.com", password: "wrong" })
       .expect(401);
-    expect((await request(app.getHttpServer()).post("/auth/login").send({ username: "testuser", password: "wrong" })).body.message).toBe("Invalid credentials");
+    expect((await request(app.getHttpServer()).post("/auth/login").send({ email: "test@example.com", password: "wrong" })).body.message).toBe("Invalid credentials");
 
     await request(app.getHttpServer()).get("/users").set("Authorization", "Bearer not-a-jwt").expect(401);
 
-    const expired = login.body.accessToken.split(".");
+    const expired = login.body.access_token.split(".");
     expired[1] = Buffer.from(JSON.stringify({ sub: created.body.id, iat: 1, exp: 2 })).toString("base64url");
     const expiredToken = `${expired[0]}.${expired[1]}.${expired[2]}`;
     await request(app.getHttpServer()).get("/users").set("Authorization", `Bearer ${expiredToken}`).expect(401);

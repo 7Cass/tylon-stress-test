@@ -11,21 +11,20 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async login(username: string, password: string): Promise<{ accessToken: string }> {
-    const user = await this.users.findByUsername(username.trim());
-    if (!user || user.password !== this.hash(password)) {
+  async login(email: string, password: string): Promise<{ access_token: string }> {
+    const user = await this.users.findByEmail(email.trim());
+    if (!user || user.password !== this.hashPassword(password)) {
       throw new UnauthorizedException("Invalid credentials");
     }
 
     return {
-      accessToken: await this.jwtService.signAsync(
-        { username: user.username },
-        { subject: user.id },
+      access_token: await this.jwtService.signAsync(
+        { sub: user.id, username: user.username },
       ),
     };
   }
 
-  private hash(password: string): string {
+  private hashPassword(password: string): string {
     return createHash("sha256").update(password).digest("hex");
   }
 }
