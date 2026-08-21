@@ -35,11 +35,11 @@ describe("auth e2e", () => {
 
     const login = await request(app.getHttpServer())
       .post("/auth/login")
-      .send({ username: "testuser", password: "secret" })
+      .send({ email: "test@example.com", password: "secret" })
       .expect(200);
 
-    expect(login.body.accessToken).toBeDefined();
-    const decoded: any = decode(login.body.accessToken);
+    expect(login.body.access_token).toBeDefined();
+    const decoded: any = decode(login.body.access_token);
     expect(decoded.sub).toBe(created.body.id);
     expect(decoded.exp - decoded.iat).toBe(1800);
 
@@ -52,14 +52,14 @@ describe("auth e2e", () => {
 
     await request(app.getHttpServer())
       .get("/users")
-      .set("Authorization", `Bearer ${login.body.accessToken}`)
+      .set("Authorization", `Bearer ${login.body.access_token}`)
       .expect(200);
 
     await request(app.getHttpServer())
       .post("/auth/login")
-      .send({ username: "testuser", password: "wrong" })
+      .send({ email: "test@example.com", password: "wrong" })
       .expect(401);
-    expect((await request(app.getHttpServer()).post("/auth/login").send({ username: "testuser", password: "wrong" })).body.message).toBe("Invalid credentials");
+    expect((await request(app.getHttpServer()).post("/auth/login").send({ email: "test@example.com", password: "wrong" })).body.message).toBe("Invalid credentials");
 
     await request(app.getHttpServer()).get("/users").set("Authorization", "Bearer not-a-jwt").expect(401);
   });

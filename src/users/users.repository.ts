@@ -86,4 +86,8 @@ export class UsersRepository {
       Array.from(this.users.values()).find((user) => user.username === username),
     );
   }
+
+  async findByEmail(email: string): Promise<User | undefined> {
+    return this.runExclusive(() => Array.from(this.users.values()).find((user) => user.email === email));
+  }
 }
