@@ -8,6 +8,7 @@
     "build": "nest build",
     "dev": "nest start --watch",
     "test": "jest",
+    "test:e2e": "jest --runInBand test/auth.e2e-spec.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"*.md\"",
     "lint": "eslint -c .eslintrc.cjs \"{src,test}/**/*.ts\" --max-warnings=0"
   },

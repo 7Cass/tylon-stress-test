@@ -68,7 +68,7 @@ export class UsersRepository {
     return this.runExclusive(() => {
       const existing = this.users.get(id);
       if (!existing) throw new UserNotFoundError(id);
-      const updated: User = { ...existing, ...input };
+      const updated: User = { ...existing, name: input.name ?? existing.name, email: input.email ?? existing.email };
       this.users.set(id, updated);
       return updated;
     });
