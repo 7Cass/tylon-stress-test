@@ -1,13 +1,12 @@
 import { Body, Controller, HttpCode, Post } from "@nestjs/common";
-import { IsString, MinLength } from "class-validator";
+import { IsEmail, IsString, MinLength } from "class-validator";
 
 import { Public } from "../common/http/public.decorator";
 import { AuthService } from "./auth.service";
 
 class LoginDto {
-  @IsString()
-  @MinLength(1)
-  username!: string;
+  @IsEmail()
+  email!: string;
 
   @IsString()
   @MinLength(1)
@@ -22,6 +21,6 @@ export class AuthController {
   @Post("login")
   @HttpCode(200)
   login(@Body() body: LoginDto) {
-    return this.auth.login(body.username, body.password);
+    return this.auth.login(body.email, body.password);
   }
 }
