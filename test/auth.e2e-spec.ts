@@ -1,7 +1,7 @@
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import request = require("supertest");
 import { decode } from "jsonwebtoken";
+import request = require("supertest");
 
 import { AppModule } from "../src/app.module";
 
@@ -18,7 +18,7 @@ describe("auth e2e", () => {
     await app.close();
   });
 
-  it("covers auth and protected users routes", async () => {
+  it("protects users routes and issues JWT access tokens", async () => {
     const created = await request(app.getHttpServer())
       .post("/users")
       .send({
@@ -38,7 +38,6 @@ describe("auth e2e", () => {
       .send({ username: "testuser", password: "secret" })
       .expect(200);
 
-    expect(login.body.accessToken).toBeDefined();
     const decoded: any = decode(login.body.accessToken);
     expect(decoded.sub).toBe(created.body.id);
     expect(decoded.exp - decoded.iat).toBe(1800);
@@ -47,8 +46,15 @@ describe("auth e2e", () => {
     await request(app.getHttpServer()).get(`/users/${created.body.id}`).expect(401);
     await request(app.getHttpServer()).patch(`/users/${created.body.id}`).send({ name: "x" }).expect(401);
     await request(app.getHttpServer()).delete(`/users/${created.body.id}`).expect(401);
-
     await request(app.getHttpServer()).get("/health").expect(200);
+
+    await request(app.getHttpServer())
+      .post("/auth/login")
+      .send({ username: "testuser", password: "secret" })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.accessToken).toBeDefined();
+      });
 
     await request(app.getHttpServer())
       .get("/users")
@@ -62,5 +68,10 @@ describe("auth e2e", () => {
     expect((await request(app.getHttpServer()).post("/auth/login").send({ username: "testuser", password: "wrong" })).body.message).toBe("Invalid credentials");
 
     await request(app.getHttpServer()).get("/users").set("Authorization", "Bearer not-a-jwt").expect(401);
+
+    const expired = login.body.accessToken.split(".");
+    expired[1] = Buffer.from(JSON.stringify({ sub: created.body.id, iat: 1, exp: 2 })).toString("base64url");
+    const expiredToken = `${expired[0]}.${expired[1]}.${expired[2]}`;
+    await request(app.getHttpServer()).get("/users").set("Authorization", `Bearer ${expiredToken}`).expect(401);
   });
 });
