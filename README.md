@@ -27,3 +27,15 @@ npm run dev
 ```bash
 npm run test
 ```
+
+### E2E
+
+```bash
+npm run test:e2e
+```
+
+JWT secret for local development and tests:
+
+```bash
+JWT_SECRET=tylon-stress-test-dev-secret
+```
