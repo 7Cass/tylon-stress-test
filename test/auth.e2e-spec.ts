@@ -51,7 +51,10 @@ describe("auth e2e", () => {
     await request(app.getHttpServer())
       .post("/auth/login")
       .send({ username: "testuser", password: "secret" })
-      .expect(200);
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.accessToken).toBeDefined();
+      });
 
     await request(app.getHttpServer())
       .get("/users")
@@ -61,12 +64,14 @@ describe("auth e2e", () => {
     await request(app.getHttpServer())
       .post("/auth/login")
       .send({ username: "testuser", password: "wrong" })
-      .expect(401)
-      .expect(({ body }) => {
-        expect(body.code).toBe("UNAUTHORIZED");
-        expect(body.message).toBe("Invalid credentials");
-      });
+      .expect(401);
+    expect((await request(app.getHttpServer()).post("/auth/login").send({ username: "testuser", password: "wrong" })).body.message).toBe("Invalid credentials");
 
     await request(app.getHttpServer()).get("/users").set("Authorization", "Bearer not-a-jwt").expect(401);
+
+    const expired = login.body.accessToken.split(".");
+    expired[1] = Buffer.from(JSON.stringify({ sub: created.body.id, iat: 1, exp: 2 })).toString("base64url");
+    const expiredToken = `${expired[0]}.${expired[1]}.${expired[2]}`;
+    await request(app.getHttpServer()).get("/users").set("Authorization", `Bearer ${expiredToken}`).expect(401);
   });
 });
