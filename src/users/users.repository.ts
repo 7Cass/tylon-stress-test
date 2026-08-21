@@ -1,13 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import { randomUUID } from "crypto";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 
-import {
-  CreateUserInput,
-  UpdateUserInput,
-  User,
-  UserId,
-} from "./user.types";
+import { CreateUserInput, UpdateUserInput, User, UserId } from "./user.types";
 
 export class UserNotFoundError extends Error {
   constructor(id: UserId) {
@@ -16,12 +10,16 @@ export class UserNotFoundError extends Error {
   }
 }
 
+export class UsernameAlreadyExistsError extends Error {
+  constructor(username: string) {
+    super(`Username already exists: ${username}`);
+    this.name = "UsernameAlreadyExistsError";
+  }
+}
+
 @Injectable()
 export class UsersRepository {
   private readonly users = new Map<UserId, User>();
-
-  // Very small “stress test” lock: in JS, operations interleave via the event loop,
-  // so we serialize CRUD for correctness under concurrent requests.
   private queue: Promise<void> = Promise.resolve();
 
   private hashPassword(password: string): string {
@@ -29,22 +27,24 @@ export class UsersRepository {
   }
 
   private runExclusive<T>(fn: () => T): Promise<T> {
-    // Serialize by chaining onto the tail promise.
     const next = this.queue.then(() => fn());
-    // Keep the tail alive even if this operation throws.
-    this.queue = next.then(
-      () => undefined,
-      () => undefined,
-    );
+    this.queue = next.then(() => undefined, () => undefined);
     return next;
   }
 
-  async create(input: CreateUserInput, id: UserId = randomUUID()): Promise<User> {
+  async create(input: CreateUserInput): Promise<User> {
     return this.runExclusive(() => {
+      const normalizedUsername = input.username.trim();
+      const exists = Array.from(this.users.values()).some(
+        (user) => user.username === normalizedUsername,
+      );
+      if (exists) throw new UsernameAlreadyExistsError(normalizedUsername);
+
       const user: User = {
-        id,
+        id: randomUUID(),
         name: input.name,
         email: input.email,
+        username: normalizedUsername,
         password: this.hashPassword(input.password),
       };
       this.users.set(user.id, user);
@@ -68,11 +68,7 @@ export class UsersRepository {
     return this.runExclusive(() => {
       const existing = this.users.get(id);
       if (!existing) throw new UserNotFoundError(id);
-
-      const updated: User = {
-        ...existing,
-        ...input,
-      };
+      const updated: User = { ...existing, ...input };
       this.users.set(id, updated);
       return updated;
     });
@@ -83,5 +79,11 @@ export class UsersRepository {
       const existed = this.users.delete(id);
       if (!existed) throw new UserNotFoundError(id);
     });
+  }
+
+  async findByUsername(username: string): Promise<User | undefined> {
+    return this.runExclusive(() =>
+      Array.from(this.users.values()).find((user) => user.username === username),
+    );
   }
 }
