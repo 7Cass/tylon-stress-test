@@ -1,7 +1,4 @@
-node_modules
-dist
-coverage
-.DS_Store
-.env
-.venv
-target
+node_modules/
+.venv/
+target/
+dist/
