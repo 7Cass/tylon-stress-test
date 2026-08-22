@@ -1,34 +1,40 @@
-# tylon-stress-test
+# tylon-stress-test 🚀
 
-This repository is a Stress Test for Tylon.
+This repository is a NestJS stress-test API for Tylon.
 
-## Simple API (NestJS)
+## Estado do projeto 🟢
 
-### Install
+- Em desenvolvimento
+- Foco em testes de carga e fluxo de autenticação
+- Pronto para evoluir junto com as etapas do card
+
+## Simple API (NestJS) ⚙️
+
+### Install 📦
 
 ```bash
 npm install
 ```
 
-### Build
+### Build 🧱
 
 ```bash
 npm run build
 ```
 
-### Dev (watch / hot reload)
+### Dev (watch / hot reload) 🔄
 
 ```bash
 npm run dev
 ```
 
-### Test
+### Test ✅
 
 ```bash
 npm run test
 ```
 
-### E2E
+### E2E 🧪
 
 ```bash
 npm run test:e2e
